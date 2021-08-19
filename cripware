@@ -1,0 +1,748 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ReplicatedFirst   = game:GetService("ReplicatedFirst")
+local UserInputService  = game:GetService("UserInputService")
+local RunService        = game:GetService("RunService")
+local Lighting          = game:GetService("Lighting")
+local Players           = game:GetService("Players")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui   = LocalPlayer.PlayerGui
+local Mouse       = LocalPlayer:GetMouse()
+local Camera      = workspace.CurrentCamera
+
+local PlayerDrawings = {}
+local Utility        = {}
+local Friends        = {}
+local PlayersInGroup = {}
+local MouseDown      = false
+
+local Map       = workspace:FindFirstChild("Map")
+local Atms      = Map:FindFirstChild("ATMz")
+local Dealers   = Map:FindFirstChild("Shopz")
+local Safes     = Map:FindFirstChild("BredMakurz")
+
+local Filter       = workspace:FindFirstChild("Filter")
+local Piles        = Filter:FindFirstChild("SpawnedPiIes")
+local DroppedMoney = Filter:FindFirstChild("SpawnedBread")
+
+local Debris = workspace:FindFirstChild("Debris")
+local CharStats = ReplicatedStorage.CharStats
+local function GetCharStats(Player)
+    return CharStats:FindFirstChild(Player or LocalPlayer.Name)
+end
+
+coroutine.wrap(function()
+    while true do
+        wait(5)
+        Friends = {}
+        PlayersInGroup = {}
+        for _,Player in pairs (Players:GetPlayers()) do
+            if Player == LocalPlayer then continue end
+    
+            if Player:IsFriendsWith(LocalPlayer.UserId) then
+                table.insert(Friends, Player.Name)
+            end
+    
+            if not values.aimbot.friends["ignore group"].Toggle then continue end
+            if not tonumber(values.aimbot.friends["group id"].Text) or not tonumber(values.aimbot.friends["group id"].Text) then continue end
+    
+            table.insert(PlayersInGroup, Player.Name)
+        end
+    end
+end)()
+
+local function Create(Object, Properties, Parent)
+    local Obj = Instance.new(Object)
+
+    for i,v in pairs (Properties) do
+        Obj[i] = v
+    end
+    if Parent ~= nil then
+        Obj.Parent = Parent
+    end
+
+    return Obj
+end
+
+local Circle = Drawing.new("Circle") do
+    Circle.Color = Color3.fromRGB(255, 255, 255)
+    Circle.Thickness = 1
+    Circle.Transparency = 1
+    Circle.Radius = 100
+    Circle.Visible = false
+
+    RunService.RenderStepped:Connect(function()
+		Circle.Position = UserInputService:GetMouseLocation()
+    end)
+end
+
+do
+    local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Fungus642/criminality/main/ui%20library?token=AVIKT4UPJS7YW3MKT4QD2ULBDW4CI"))()
+
+    local ui      = library:New("cripware")
+    local aimbot  = ui:Tab("aimbot")
+    local visuals = ui:Tab("visuals")
+    local misc    = ui:Tab("misc")
+
+    local assist = aimbot:Sector("assist", "Left")
+    assist:Element("ToggleKeybind", "enabled")
+    assist:Element("Dropdown", "hitbox", {options = {"closest", "head", "torso"}})
+    assist:Element("Slider", "smoothing", {min = 1, max = 50, default = 1})
+
+    local silent = aimbot:Sector("silent aim", "Left")
+    silent:Element("ToggleKeybind", "enabled")
+    silent:Element("Dropdown", "hitbox", {options = {"head", "torso"}})
+    silent:Element("Slider", "hitchance", {min = 1, max = 100, default = 100})
+    silent:Element("Toggle", "wallbang")
+
+    local targeting = aimbot:Sector("targeting", "Left")
+    targeting:Element("Dropdown", "prioritize", {options = {"crosshair", "distance", "highest bounty", "on kos"}})
+    targeting:Element("Toggle", "visible check")
+    targeting:Element("Toggle", "require tool")
+    targeting:Element("Slider", "max distance", {min = 250, max = 5000, default = 5000})
+
+    local fov = aimbot:Sector("fov", "Right")
+    fov:Element("Slider", "fov size", {min = 30, max = 600, default = 100}, function(State) Circle.Radius = State.Slider end)
+    fov:Element("ToggleColor", "draw fov", {default = {Color = Color3.fromRGB(255,255,255)}}, function(State) Circle.Visible = State.Toggle Circle.Color = State.Color end)
+    fov:Element("Slider", "sides", {min = 15, max = 100, default = 80}, function(State) Circle.NumSides = State.Slider end)
+    fov:Element("Slider", "thickness", {min = 1, max = 4, default = 1}, function(State) Circle.Thickness = State.Slider end)
+
+    local friends = aimbot:Sector("friends", "Right")
+    friends:Element("Toggle", "ignore friends")
+    friends:Element("Toggle", "ignore group")
+    friends:Element("TextBox", "group id", {placeholder = "group id"})
+
+    local character = aimbot:Sector("character", "Right")
+    character:Element("ToggleKeybind", "infinite stamina")
+    character:Element("Toggle", "no fall damage")
+    character:Element("Toggle", "no down")
+    character:Element("Toggle", "no ragdoll")
+
+    local autofarm = aimbot:Sector("autofarm", "Left")
+    autofarm:Element("Toggle", "auto pickup")
+    autofarm:Element("Jumbobox", "items", {options = {"cash", "piles"}})
+
+    coroutine.wrap(function()
+        while true do
+            RunService.RenderStepped:Wait()
+
+            local SelfCharacter = LocalPlayer.Character
+            local SelfRootPart, SelfHumanoid = SelfCharacter and SelfCharacter:FindFirstChild("HumanoidRootPart"), SelfCharacter and SelfCharacter:FindFirstChildOfClass("Humanoid")
+            if SelfCharacter and SelfRootPart and SelfHumanoid and values.aimbot.autofarm["auto pickup"].Toggle then
+                local Found = false
+                if table.find(values.aimbot.autofarm["items"].Jumbobox, "piles") then
+                    for _,Pile in pairs (Piles:GetChildren()) do
+                        local MainPart = Pile:FindFirstChild("MeshPart")
+                        if not MainPart then continue end
+                        local Magnitude = (LocalPlayer.Character.HumanoidRootPart.Position - MainPart.Position).Magnitude
+                
+                        if Magnitude < 7 then
+                            game:GetService("ReplicatedStorage").Events.CPIK_PU:FireServer(MainPart)
+                            Found = true
+                        end
+                    end
+                end
+                if table.find(values.aimbot.autofarm["items"].Jumbobox, "cash") then
+                    for _,Cash in pairs (DroppedMoney:GetChildren()) do
+                        local Magnitude = (LocalPlayer.Character.HumanoidRootPart.Position - Cash.Position).Magnitude
+                
+                        if Magnitude < 7 then
+                            game:GetService("ReplicatedStorage").Events.CZDKBSLUP:FireServer(Cash)
+                            Found = true
+                        end
+                    end
+                end
+            
+                if Found then
+                    wait(5)
+                end
+            end
+        end
+    end)()
+
+    local players = visuals:Sector("players", "Left")
+    players:Element("ToggleColor", "box", {default = {Color = Color3.fromRGB(255,255,255)}}, function(tbl)
+        for _,Player in pairs (PlayerDrawings) do
+            Player.Box.Color = tbl.Color
+        end
+    end)
+    players:Element("ToggleColor", "name", {default = {Color = Color3.fromRGB(255,255,255)}}, function(tbl)
+        for _,Player in pairs (PlayerDrawings) do
+            Player.Name.Color = tbl.Color
+        end
+    end)
+    players:Element("Toggle", "health")
+    players:Element("ToggleColor", "weapon", {default = {Color = Color3.fromRGB(255,255,255)}}, function(tbl)
+        for _,Player in pairs (PlayerDrawings) do
+            Player.Weapon.Color = tbl.Color
+        end
+    end)
+    players:Element("Jumbobox", "indicators", {options = {"bounty"}})
+
+    local settings = visuals:Sector("settings", "Left")
+    settings:Element("Jumbobox", "outlines", {options = {"drawings", "text"}, default = {Jumbobox = {"drawings", "text"}}}, function(tbl)
+        local TextOutline = table.find(tbl.Jumbobox, "text") and true or false
+        for _,Player in pairs (PlayerDrawings) do
+            Player.Name.Outline = TextOutline
+            Player.Weapon.Outline = TextOutline
+            Player.Bounty.Outline = TextOutline
+        end
+    end)
+    settings:Element("Dropdown", "text casing", {options = {"off", "lower", "upper"}})
+    settings:Element("Dropdown", "font", {options = {"Plex", "Monospace", "System", "UI"}}, function(tbl)
+        for _,Player in pairs (PlayerDrawings) do
+            local Font = Drawing.Fonts[tbl.Dropdown]
+            Player.Name.Font = Font
+            Player.Weapon.Font = Font
+            Player.Bounty.Font = Font
+        end
+    end)
+    settings:Element("Slider", "size", {min = 12, max = 16, default = 13}, function(tbl)
+        for _,Player in pairs (PlayerDrawings) do
+            Player.Name.Size = tbl.Slider
+            Player.Weapon.Size = tbl.Slider
+            Player.Bounty.Size = tbl.Slider
+        end
+    end)
+    settings:Element("Slider", "max distance", {min = 250, max = 5000, default = 5000})
+
+    local ColorCorrection = Create("ColorCorrectionEffect", {
+        Enabled = false,
+        Name = "CustomColorCorrection",
+    }, Camera)
+
+    local world = visuals:Sector("world", "Right")
+    world:Element("ToggleColor", "outdoor ambient", {default = {Color = Color3.fromRGB(255,255,255)}}, function(tbl)
+        if tbl.Toggle then
+            Lighting.OutdoorAmbient = tbl.Color
+        else
+            Lighting.OutdoorAmbient = Lighting.LightingSettings.OutdoorAmbient.Value
+        end
+    end)
+    world:Element("Toggle", "saturation modifier", nil, function(tbl)
+        ColorCorrection.Enabled = tbl.Toggle
+    end)
+    world:Element("Slider", "saturation", {min = 0, max = 100, default = 0}, function(tbl)
+        ColorCorrection.Saturation = tbl.Slider/50
+    end)
+    world:Element("Toggle", "time of day")
+    world:Element("Slider", "clock time", {min = 0, max = 24, default = 12})
+    world:Element("Toggle", "brightness", nil, function(tbl)
+        if tbl.Toggle then
+            Lighting.Brightness = values.visuals.world["brightness amount"].Slider
+        end
+    end)
+    world:Element("Slider", "brightness amount", {min = 0, max = 10, default = 0}, function(tbl)
+        if values.visuals.world.brightness.Toggle then
+            Lighting.Brightness = tbl.Slider
+        end
+    end)
+    world:Element("Toggle", "remove shadows", nil, function(tbl)
+        Lighting.GlobalShadows = not tbl.Toggle
+    end)
+
+    local worldesp = visuals:Sector("world esp", "Right")
+    worldesp:Element("ToggleTrans", "safes", {default = {Color = Color3.fromRGB(255,115,115), Transparency = 0.5}}, function(tbl)
+        for _,Safe in pairs (Safes:GetChildren()) do
+            local MainPart = Safe:FindFirstChild("MainPart")
+            local Handle = MainPart:FindFirstChild("BoxHandleAdornment")
+    
+            if Handle then
+                Handle.Color3 = tbl.Color
+                Handle.Transparency = tbl.Transparency
+                Handle.Visible = tbl.Toggle
+            end
+        end
+    end)
+    worldesp:Element("ToggleTrans", "pile esp", {default = {Color = Color3.fromRGB(255,255,115), Transparency = 0.5}}, function(tbl)
+        for _,Pile in pairs (Piles:GetChildren()) do
+            local MainPart = Pile:FindFirstChild("MeshPart")
+            local Handle = MainPart:FindFirstChild("BoxHandleAdornment")
+    
+            if Handle then
+                Handle.Color3 = tbl.Color
+                Handle.Transparency = tbl.Transparency
+                Handle.Visible = tbl.Toggle
+            end
+        end
+    end)
+    worldesp:Element("ToggleTrans", "dealer esp", {default = {Color = Color3.fromRGB(255,115,255), Transparency = 0.5}}, function(tbl)
+        for _,Dealer in pairs (Dealers:GetChildren()) do
+            local MainPart = Dealer:FindFirstChild("MainPart")
+            local Handle = MainPart:FindFirstChild("BoxHandleAdornment")
+    
+            if Handle then
+                Handle.Color3 = tbl.Color
+                Handle.Transparency = tbl.Transparency
+                Handle.Visible = tbl.Toggle
+            end
+        end
+    end)
+    worldesp:Element("ToggleTrans", "atm esp", {default = {Color = Color3.fromRGB(115,115,255), Transparency = 0.5}}, function(tbl)
+        for _,Atm in pairs (Atms:GetChildren()) do
+            local MainPart = Atm:FindFirstChild("MainPart")
+            local Handle = MainPart:FindFirstChild("BoxHandleAdornment")
+    
+            if Handle then
+                Handle.Color3 = tbl.Color
+                Handle.Transparency = tbl.Transparency
+                Handle.Visible = tbl.Toggle
+            end
+        end
+    end)
+    worldesp:Element("ToggleTrans", "cash esp", {default = {Color = Color3.fromRGB(115,255,115), Transparency = 0.5}}, function(tbl)
+        for _,Money in pairs (DroppedMoney:GetChildren()) do
+            local MainPart = Money
+            local Handle = MainPart:FindFirstChild("BoxHandleAdornment")
+    
+            if Handle then
+                Handle.Color3 = tbl.Color
+                Handle.Transparency = tbl.Transparency
+                Handle.Visible = tbl.Toggle
+            end
+        end
+    end)
+
+    local configs = misc:Sector("configs", "Left")
+    configs:Element("TextBox", "config", {placeholder = "config name"})
+    configs:Element("Button", "save", {}, function() if values.misc.configs.config.Text ~= "" then library:SaveConfig(values.misc.configs.config.Text) end end)
+    configs:Element("Button", "load", {}, function() if values.misc.configs.config.Text ~= "" then ConfigLoad:Fire(values.misc.configs.config.Text) end end)
+    configs:Element("Toggle", "keybind list", nil, function(tbl)
+        library:SetKeybindVisible(tbl.Toggle)
+    end)
+end
+
+Utility.Settings = {
+    Line = {
+        Thickness = 1.5,
+        Color = Color3.fromRGB(0, 255, 0)
+    },
+    Text = {
+        Size = 13,
+        Center = true,
+        Outline = table.find(values.visuals.settings.outlines.Jumbobox, "text") and true or false,
+        Font = Drawing.Fonts[values.visuals.settings.font.Dropdown],
+        Color = Color3.fromRGB(255, 255, 255)
+    },
+    Square = {
+        Thickness = 1.5,
+        Color = values.visuals.players.box.Color,
+        Filled = false,
+    },
+}
+function Utility.New(Type, Outline)
+    local drawing = Drawing.new(Type)
+    for i, v in pairs(Utility.Settings[Type]) do
+        drawing[i] = v
+    end
+    if Outline then
+        drawing.Color = Color3.new(0,0,0)
+        drawing.Thickness = 3
+    end
+    return drawing
+end
+function Utility.Add(Player)
+    if not PlayerDrawings[Player] then
+        PlayerDrawings[Player] = {
+            Name = Utility.New("Text"),
+            Weapon = Utility.New("Text"),
+            Bounty = Utility.New("Text"),
+            BoxOutline = Utility.New("Square", true),
+            Box = Utility.New("Square"),
+            HealthOutline = Utility.New("Line", true),
+            Health = Utility.New("Line")
+        }
+    end
+end
+for _,Player in pairs(Players:GetPlayers()) do
+    if Player ~= LocalPlayer then
+        Utility.Add(Player)
+    end
+end
+Players.PlayerAdded:Connect(Utility.Add)
+Players.PlayerRemoving:Connect(function(Player)
+    if PlayerDrawings[Player] then
+        for i,v in pairs(PlayerDrawings[Player]) do
+            for i2,v2 in pairs(v) do
+                if v then
+                    v:Remove()
+                end
+            end
+        end
+
+        PlayerDrawings[Player] = nil
+    end
+end)
+local ValidTargets = {}
+RunService.RenderStepped:Connect(function()
+    ValidTargets = {}
+
+    MouseDown = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+
+    if values.aimbot.assist.enabled.Toggle or values.aimbot["silent aim"].enabled.Toggle then else return end
+    local SelfCharacter = LocalPlayer.Character
+    local SelfRootPart, SelfHumanoid = SelfCharacter and SelfCharacter:FindFirstChild("HumanoidRootPart"), SelfCharacter and SelfCharacter:FindFirstChildOfClass("Humanoid")
+    if not SelfCharacter or not SelfRootPart or not SelfHumanoid then return end
+
+    if values.aimbot.targeting["require tool"].Toggle and not SelfCharacter:FindFirstChildWhichIsA("Tool") then return end
+
+    local Closest      = 999999
+
+    local Params                      = RaycastParams.new()
+    Params.FilterType                 = Enum.RaycastFilterType.Blacklist
+    Params.IgnoreWater                = true
+    Params.FilterDescendantsInstances = {Camera, SelfCharacter, Filter, Debris}
+
+    local CameraPosition = Camera.CFrame.Position
+    local MousePosition  = Vector2.new(Mouse.X, Mouse.Y)
+    for _,Player in pairs (Players:GetPlayers()) do
+        local Character = Player.Character
+        local RootPart, Humanoid = Character and Character:FindFirstChild("HumanoidRootPart"), Character and Character:FindFirstChildOfClass("Humanoid")
+        if not Character or not RootPart or not Humanoid then continue end
+        if Character:FindFirstChildOfClass("ForceField") then continue end
+        if not Character:FindFirstChild("Head") then continue end
+
+        if table.find(PlayersInGroup, Player.Name) then continue end
+        if values.aimbot.friends["ignore friends"].Toggle then
+            if table.find(Friends, Player.Name) then continue end
+        end
+
+        local DistanceFromCharacter = (Camera.CFrame.Position - RootPart.Position).Magnitude
+        if values.aimbot.targeting["max distance"].Slider < DistanceFromCharacter then continue end
+
+        local Pos, OnScreen = Camera:WorldToViewportPoint(RootPart.Position)
+        if not OnScreen then continue end
+        local Magnitude = (Vector2.new(Pos.X, Pos.Y) - MousePosition).Magnitude
+        if not (Magnitude < values.aimbot.fov["fov size"].Slider) then continue end
+
+        local Hitbox = values.aimbot.assist.hitbox.Dropdown == "head" and Character.Head or Character.Torso
+        if values.aimbot.assist.hitbox.Dropdown == "closest" then
+            local HeadPos  = Camera:WorldToViewportPoint(Character.Head.Position)
+            local TorsoPos = Camera:WorldToViewportPoint(Character.Torso.Position)
+
+            local HeadDistance  = (Vector2.new(HeadPos.X, HeadPos.Y) - MousePosition).Magnitude
+            local TorsoDistance = (Vector2.new(TorsoPos.X, TorsoPos.Y) - MousePosition).Magnitude
+
+            Hitbox = HeadDistance < TorsoDistance and Character.Head or Character.Torso
+        end
+
+        if values.aimbot.targeting["visible check"].Toggle then
+            local Direction = Hitbox.Position - CameraPosition
+            local Result    = workspace:Raycast(CameraPosition, Direction.Unit * Direction.Magnitude, Params)
+
+            if not Result then continue end
+            local Hit, Pos  = Result.Instance, Result.Position
+                
+            if not Hit:FindFirstAncestor(Player.Name) then continue end
+            table.insert(ValidTargets, {Player, Hitbox, Magnitude, DistanceFromCharacter, Player.leaderstats.Bounty.Value})
+        else
+            table.insert(ValidTargets, {Player, Hitbox, Magnitude, DistanceFromCharacter, Player.leaderstats.Bounty.Value})
+        end
+    end
+
+    if values.aimbot.targeting.prioritize.Dropdown == "crosshair" then
+        table.sort(ValidTargets, function(a, b) return a[3] < b[3] end)
+    elseif values.aimbot.targeting.prioritize.Dropdown == "distance" then
+        table.sort(ValidTargets, function(a, b) return a[4] < b[4] end)
+    elseif values.aimbot.targeting.prioritize.Dropdown == "highest bounty" then
+        table.sort(ValidTargets, function(a, b) return a[5] < b[5] end)
+    else
+        table.sort(ValidTargets, function(a, b) return a[3] < b[3] end)
+    end
+
+    if values.aimbot.assist.enabled.Toggle and values.aimbot.assist.enabled.Active then
+        if #ValidTargets ~= 0 then
+            local Target = ValidTargets[1]
+            local Hitbox = Target[2]
+
+            local Pos = Camera:WorldToScreenPoint(Hitbox.Position)
+            local Magnitude = Vector2.new(Pos.X - Mouse.X, Pos.Y - Mouse.Y)
+            mousemoverel(Magnitude.X/values.aimbot.assist.smoothing.Slider, Magnitude.Y/values.aimbot.assist.smoothing.Slider)
+        end
+    end
+end)
+
+for _,Atm in pairs (Atms:GetChildren()) do
+    local MainPart = Atm:FindFirstChild("MainPart")
+
+    local Handle = Create("BoxHandleAdornment", {
+        Size = MainPart.Size,
+        AlwaysOnTop = true,
+        Adornee = MainPart,
+        Color3 = values.visuals["world esp"]["atm esp"].Color,
+        Transparency = values.visuals["world esp"]["atm esp"].Transparency,
+        ZIndex = 0,
+        Visible = values.visuals["world esp"]["atm esp"].Toggle,
+    }, MainPart)
+end
+for _,Dealer in pairs (Dealers:GetChildren()) do
+    local MainPart = Dealer:FindFirstChild("MainPart")
+
+    local Handle = Create("BoxHandleAdornment", {
+        Size = MainPart.Size,
+        AlwaysOnTop = true,
+        Adornee = MainPart,
+        Color3 = values.visuals["world esp"]["dealer esp"].Color,
+        Transparency = values.visuals["world esp"]["dealer esp"].Transparency,
+        ZIndex = 0,
+        Visible = values.visuals["world esp"]["dealer esp"].Toggle,
+    }, MainPart)
+end
+for _,Money in pairs (DroppedMoney:GetChildren()) do
+    local MainPart = Money
+
+    local Handle = Create("BoxHandleAdornment", {
+        Size = MainPart.Size,
+        AlwaysOnTop = true,
+        Adornee = MainPart,
+        Color3 = values.visuals["world esp"]["cash esp"].Color,
+        Transparency = values.visuals["world esp"]["cash esp"].Transparency,
+        ZIndex = 0,
+        Visible = values.visuals["world esp"]["cash esp"].Toggle,
+    }, MainPart)
+end
+DroppedMoney.ChildAdded:Connect(function(Money)
+    local MainPart = Money
+
+    local Handle = Create("BoxHandleAdornment", {
+        Size = MainPart.Size,
+        AlwaysOnTop = true,
+        Adornee = MainPart,
+        Color3 = values.visuals["world esp"]["cash esp"].Color,
+        Transparency = values.visuals["world esp"]["cash esp"].Transparency,
+        ZIndex = 0,
+        Visible = values.visuals["world esp"]["cash esp"].Toggle,
+    }, MainPart)
+end)
+for _,Safe in pairs (Safes:GetChildren()) do
+    local MainPart = Safe:FindFirstChild("MainPart")
+
+    local Handle = Create("BoxHandleAdornment", {
+        Size = MainPart.Size,
+        AlwaysOnTop = true,
+        Adornee = MainPart,
+        Color3 = values.visuals["world esp"]["safes"].Color,
+        Transparency = values.visuals["world esp"]["safes"].Transparency,
+        ZIndex = 0,
+        Visible = values.visuals["world esp"]["safes"].Toggle,
+    }, MainPart)
+end
+for _,Pile in pairs (Piles:GetChildren()) do
+    local MainPart = Pile:FindFirstChild("MeshPart")
+
+    local Handle = Create("BoxHandleAdornment", {
+        Size = MainPart.Size,
+        AlwaysOnTop = true,
+        Adornee = MainPart,
+        Color3 = values.visuals["world esp"]["pile esp"].Color,
+        Transparency = values.visuals["world esp"]["pile esp"].Transparency,
+        ZIndex = 0,
+        Visible = values.visuals["world esp"]["pile esp"].Toggle,
+    }, MainPart)
+end
+Piles.ChildAdded:Connect(function(Pile)
+    local MainPart = Pile:WaitForChild("MeshPart", 5)
+
+    local Handle = Create("BoxHandleAdornment", {
+        Size = MainPart.Size,
+        AlwaysOnTop = true,
+        Adornee = MainPart,
+        Color3 = values.visuals["world esp"]["pile esp"].Color,
+        Transparency = values.visuals["world esp"]["pile esp"].Transparency,
+        ZIndex = 0,
+        Visible = values.visuals["world esp"]["pile esp"].Toggle,
+    }, MainPart)
+end)
+
+local OldNamecall
+OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = {...}
+    local method = tostring(getnamecallmethod())
+    local callscript = getcallingscript()
+
+    if method == "FireServer" then
+        if self.Name == "__DASFXD" and values.aimbot.character["no fall damage"].Toggle then
+            return wait(9e9)
+        elseif self.Name == "VBMCXYUKG" then
+            return wait(9e9)
+        elseif self.Name == "frcontrol!" or self.Name == "recoilcontrol!" then
+            return wait(9e9)
+        end
+    end
+
+    if not checkcaller() then
+        if method == "FindPartOnRayWithIgnoreList" then
+            if not table.find(args[2], LocalPlayer.Character) or not table.find(args[2], Camera) then return OldNamecall(self, ...) end
+
+            if not values.aimbot["silent aim"].enabled.Toggle or not values.aimbot["silent aim"].enabled.Active then return OldNamecall(self, ...) end
+            if not (math.random(1, 100) <= values.aimbot["silent aim"].hitchance.Slider) then return OldNamecall(self, ...) end
+
+            local Target = ValidTargets[1]
+            if Target ~= nil then
+                args[1] = Ray.new(Camera.CFrame.Position, (Target[2].Position - Camera.CFrame.Position).unit * 500)
+            end
+
+            if values.aimbot["silent aim"].wallbang.Toggle then
+                table.insert(args[2], Map)
+            end
+        end
+    end
+
+    return OldNamecall(self, unpack(args))
+end)
+local OldIndex
+OldIndex = hookmetamethod(game, "__index", function(self, key)
+    local Name = tostring(self)
+    if values.aimbot.character["no ragdoll"].Toggle then
+        if key == "Value" then
+            if Name == "RagdollTime" or Name == "RagdollTime2" then
+                return 0
+            elseif Name == "RagdollSwitch" or Name == "RagdollSwitch2" or Name == "SRagdolled" then
+                return false
+            end
+        end
+    end
+
+    if values.visuals.world["time of day"].Toggle then
+        if key == "ClockTime" or key == "TimeOfDay" then
+            return values.visuals.world["clock time"].Slider
+        end
+    end
+    if values.visuals.world["brightness"].Toggle then
+        if key == "Brightness" then
+            return values.visuals.world["brightness amount"].Slider
+        end
+    end
+
+    if values.visuals.world["outdoor ambient"].Toggle then
+        if key == "OutdoorAmbient" then
+            return values.visuals.world["outdoor ambient"].Color
+        end
+    end
+
+    return OldIndex(self, key)
+end)
+
+RunService.RenderStepped:Connect(function()
+    local Stats = GetCharStats()
+    if Stats and Stats:FindFirstChild("Downed") then
+        if values.aimbot.character["no down"].Toggle then
+            Stats:FindFirstChild("Downed").Value = false
+        end
+    end
+
+
+    for _,Player in pairs (Players:GetPlayers()) do
+        local PlayerDrawing = PlayerDrawings[Player]
+        if not PlayerDrawing then continue end
+
+        for _,Drawing in pairs (PlayerDrawing) do
+            Drawing.Visible = false
+        end
+
+        local Character = Player.Character
+        local RootPart, Humanoid = Character and Character:FindFirstChild("HumanoidRootPart"), Character and Character:FindFirstChildOfClass("Humanoid")
+        if not Character or not RootPart or not Humanoid then continue end
+
+        local DistanceFromCharacter = (Camera.CFrame.Position - RootPart.Position).Magnitude
+        if values.visuals.settings["max distance"].Slider < DistanceFromCharacter then continue end
+
+        local Pos, OnScreen = Camera:WorldToViewportPoint(RootPart.Position)
+        if not OnScreen then continue end
+
+        local Drawings, Text = table.find(values.visuals.settings.outlines.Jumbobox, "drawings") ~= nil, table.find(values.visuals.settings.outlines.Jumbobox, "text") ~= nil
+        local Size           = (Camera:WorldToViewportPoint(RootPart.Position - Vector3.new(0, 3, 0)).Y - Camera:WorldToViewportPoint(RootPart.Position + Vector3.new(0, 2.6, 0)).Y) / 2
+        local TextCasing     = values.visuals.settings["text casing"].Dropdown
+        local BoxSize        = Vector2.new(Size * 1.5, Size * 1.9)
+        local BoxPos         = Vector2.new(Pos.X - Size * 1.5 / 2, (Pos.Y - Size * 1.6 / 2))
+
+        local Name           = PlayerDrawing.Name
+        local Weapon         = PlayerDrawing.Weapon
+        local Box            = PlayerDrawing.Box
+        local BoxOutline     = PlayerDrawing.BoxOutline
+        local Health         = PlayerDrawing.Health
+        local HealthOutline  = PlayerDrawing.HealthOutline
+        local Bounty         = PlayerDrawing.Bounty
+
+        if values.visuals.players.box.Toggle then
+            Box.Size = BoxSize
+            Box.Position = BoxPos
+            Box.Visible = true
+
+            if Drawings then
+                BoxOutline.Size = BoxSize
+                BoxOutline.Position = BoxPos
+                BoxOutline.Visible = true
+            end
+        end
+
+        if values.visuals.players.health.Toggle then
+            Health.From = Vector2.new((BoxPos.X - 5), BoxPos.Y + BoxSize.Y)
+            Health.To = Vector2.new(Health.From.X, Health.From.Y - (Player.Character.Humanoid.Health / Player.Character.Humanoid.MaxHealth) * BoxSize.Y)
+            Health.Visible = true
+
+            if Drawings then
+                HealthOutline.From = Vector2.new(Health.From.X, BoxPos.Y + BoxSize.Y + 1)
+                HealthOutline.To = Vector2.new(Health.From.X, (Health.From.Y - 1 * BoxSize.Y) -1)
+                HealthOutline.Visible = true
+            end
+        end
+
+        if values.visuals.players.name.Toggle then
+            Name.Text = Player.Name
+            Name.Position = Vector2.new(BoxSize.X / 2 + BoxPos.X, BoxPos.Y - 16)
+            Name.Visible = true
+        end
+
+        if values.visuals.players.weapon.Toggle then
+            local PlayerWeapon = Player.Character:FindFirstChildWhichIsA("Tool") and Player.Character:FindFirstChildWhichIsA("Tool").Name
+            Weapon.Text = PlayerWeapon or "None"
+            Weapon.Position = Vector2.new(BoxSize.X / 2 + BoxPos.X, BoxSize.Y + BoxPos.Y + 1)
+            Weapon.Visible = true
+        end
+
+        if table.find(values.visuals.players.indicators.Jumbobox, "bounty") then
+            Bounty.Center = false
+            Bounty.Text = Player.leaderstats.Bounty.Value
+            Bounty.Position = Vector2.new(BoxSize.X + BoxPos.X + 6, BoxPos.Y - 1)
+            Bounty.Visible = true
+        end
+
+        if TextCasing == "upper" then
+            Weapon.Text = string.upper(Weapon.Text)
+            Name.Text = string.upper(Name.Text)
+        elseif TextCasing == "lower" then
+            Weapon.Text = string.lower(Weapon.Text)
+            Name.Text = string.lower(Name.Text)
+        end
+    end
+end)
+
+local function OnLocalCharacterAdded(Character)
+    if not Character then return end
+    repeat wait() until Character:FindFirstChild("Humanoid")
+
+    local StaminaTbl
+
+    for i,v in pairs (getgc(true)) do
+        if type(v) == "table" and rawget(v, "S") and rawget(v, "WS") then
+            StaminaTbl = v
+            break
+        end
+    end
+
+    local Loop
+    Loop = RunService.RenderStepped:Connect(function()
+        if not Character or Character.Parent == nil then
+            Loop:Disconnect()
+            Loop = nil
+        end
+
+        if values.aimbot.character["infinite stamina"].Toggle and values.aimbot.character["infinite stamina"].Active then
+            StaminaTbl.S = 100
+        end
+    end)
+end
+
+OnLocalCharacterAdded(LocalPlayer.Character)
+LocalPlayer.CharacterAdded:Connect(OnLocalCharacterAdded)
