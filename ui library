@@ -1,6 +1,6 @@
 getgenv().values = {}
 local library = {}
-local Signal = loadstring(game:HttpGet("https://raw.githubusercontent.com/Quenty/NevermoreEngine/version2/Modules/Shared/Events/Signal.lua"))()
+local Signal = loadstring(game:HttpGet("https://raw.githubusercontent.com/Fungus642/criminality/main/signal?token=AVIKT4QDNPO7UDXQGOB6VDDBDW35I"))()
 local ConfigSave = Signal.new("ConfigSave")
 ConfigLoad = Signal.new("ConfigLoad")
 
