@@ -1,6 +1,6 @@
 getgenv().values = {}
 local library = {}
-local Signal = loadstring(game:HttpGet("https://raw.githubusercontent.com/Fungus642/criminality/main/signal?token=AVIKT4QDNPO7UDXQGOB6VDDBDW35I"))()
+local Signal = loadstring(game:HttpGet("https://raw.githubusercontent.com/Fungus642/wagdiawgid267a7igid7g7ig/main/signal"))()
 local ConfigSave = Signal.new("ConfigSave")
 ConfigLoad = Signal.new("ConfigLoad")
 
