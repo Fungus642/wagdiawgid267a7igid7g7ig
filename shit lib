@@ -1,0 +1,135 @@
+local PLR1010 = game.Players.LocalPlayer
+local Paths = game:GetService("PathfindingService")
+
+function ClosestPart(path)
+	local lowest = 1e999
+	local obj = nil
+	local root = PLR1010.Character:FindFirstChild("HumanoidRootPart")
+	if root then
+		for i,v in pairs(path:GetChildren()) do
+			if v and v ~= PLR1010.Character then
+				local p = v:FindFirstChildOfClass("Part")
+				if p and (p.Position - root.Position).Magnitude < lowest then
+					lowest = (p.Position - root.Position).Magnitude
+					enemy = p
+				end
+			end
+		end
+	end
+	return enemy.Parent
+end
+
+function IsInside(part,Size)
+	local cam = workspace.CurrentCamera
+	if part then
+		local vector, onScreen = cam:WorldToScreenPoint(part.Position)
+		local x,y = cam.ViewportSize.X / 2,cam.ViewportSize.Y / 2
+		if vector.X > x - Size and vector.X < x + Size and vector.Y > y - Size and vector.Y < y + Size then 
+			return true
+		end
+	end
+	return false
+end
+
+function ClosestPlr(char)
+	local lowest = 1e999
+	local obj = nil
+	local root = PLR1010.Character:FindFirstChild("HumanoidRootPart")
+	if root then
+		for i,v in pairs(game.Players:GetChildren()) do
+			if v and v ~= PLR1010 and v.Character then
+				local p = v.Character:FindFirstChildOfClass("Part")
+				if p and (p.Position - root.Position).Magnitude < lowest then
+					lowest = (p.Position - root.Position).Magnitude
+					if char then
+						enemy = p.Parent
+					else
+						enemy = v
+					end
+				end
+			end
+		end
+	end
+	return enemy
+end
+
+function WalkTo(Vec3,TimeOut)
+	local hum = PLR1010.Character:FindFirstChild("Humanoid")
+	local root = PLR1010.Character:FindFirstChild("HumanoidRootPart")
+	if hum and root then 
+		on = true
+		if TimeOut > 0 then
+			coroutine.resume(coroutine.create(function()
+				iter = 0
+				repeat 
+					wait(.1)
+					iter = iter + .1
+				until not on or iter >= TimeOut
+				on = false
+			end))
+		end
+		local path = Paths:CreatePath()
+		path:ComputeAsync(root.Position, Vec3)
+		local waypoints = path:GetWaypoints()
+		if #waypoints > 0 then
+			for _,point in pairs(waypoints) do
+				if not on then break end
+				hum:MoveTo(point.Position)
+				hum.MoveToFinished:Wait()
+			end
+			for Checks = 1,3 do
+				if not on then break end
+				hum:MoveTo(waypoints[#waypoints].Position)
+				hum.MoveToFinished:Wait()
+			end
+		end
+		on = false
+	end
+end
+
+function Shuffle(t)
+	local tbl = {}
+	for i = 1, #t do
+		tbl[i] = t[i]
+	end
+	for i = #tbl, 2, -1 do
+		local j = math.random(i)
+		tbl[i], tbl[j] = tbl[j], tbl[i]
+	end
+	return tbl
+end
+
+function KeyHit(key) end;function KeyDown(key) end;function KeyUp(key) end;local keys
+if pcall(function()
+	Input.KeyPress(0x10)
+end) then
+	keys = "g"
+	function KeyHit(key)
+		pcall(function() Input.KeyPress(keys[key]) end)
+	end
+	function KeyDown(key)
+		pcall(function() Input.KeyDown(keys[key]) end)
+	end
+	function KeyUp(key)
+		pcall(function() Input.KeyUp(keys[key]) end)
+	end
+elseif pcall(function()
+	syn_keypress(0x10)
+end) then
+	keys = "g"
+	function KeyHit(key)
+		pcall(function() syn_keypress(keys[key]) wait() syn_keyrelease(keys[key]) end)
+	end
+	function KeyDown(key)
+		pcall(function() syn_keypress(keys[key]) end)
+	end
+	function KeyUp(key)
+		pcall(function() syn_keyrelease(keys[key]) end)
+	end
+end
+if not keys then
+	print('Error, keys were not defined')
+else
+	keys = {}
+	keys["0"] = 0x30;keys["1"] = 0x31;keys["2"] = 0x32;keys["3"] = 0x33;keys["4"] = 0x34;keys["5"] = 0x35;keys["6"] = 0x36;keys["7"] = 0x37;keys["8"] = 0x38;keys["9"] = 0x39;keys.A = 0x41;keys.B = 0x42;keys.C = 0x43;keys.D = 0x44;keys.E = 0x45;keys.F = 0x46;keys.G = 0x47;keys.H = 0x48;keys.I = 0x49;keys.J = 0x4A;keys.K = 0x4B;keys.L = 0x4C;keys.M = 0x4D;keys.N = 0x4E;keys.O = 0x4F;keys.P = 0x50;keys.Q = 0x51;keys.R = 0x52;keys.S = 0x53;keys.T = 0x54;keys.U = 0x55;keys.V = 0x56;keys.W = 0x57;keys.X = 0x58;keys.Y = 0x59;keys.Z = 0x5A;keys[";"] = 0xBA;keys.SHIFT = 0x10;keys["+"] = 0xBB;keys["-"] = 0xBD;keys["_"] = 0xBD;keys["."] = 0xBE;keys[","] = 0xBC;keys.LEFT = 0x25;keys.RIGHT = 0x27;keys.UP = 0x26;keys.DOWN = 0x28;keys.SPACE = 0x20;keys.TAB = 0x09;keys["/"] = 0xBF;keys.ENTER = 0x0D
+end
